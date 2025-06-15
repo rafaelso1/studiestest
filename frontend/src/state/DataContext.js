@@ -8,8 +8,9 @@ export function DataProvider({ children }) {
   const [pagination, setPagination] = useState({
     total: 0,
     page: 1,
-    limit: 10,
-    totalPages: 0
+    itemsPerPage: 1,
+    totalPages: 0,
+    links: {}
   });
   const [filters, setFilters] = useState({
     categories: [],
@@ -26,10 +27,8 @@ export function DataProvider({ children }) {
     });
   }, []);
 
-  // Fetch items with pagination, search and filter support
+  // Fetch items with search support (no pagination)
   const fetchItems = useCallback(async ({
-    page = 1,
-    limit = 10,
     q = '',
     category = null,
     minPrice = null,
@@ -43,8 +42,6 @@ export function DataProvider({ children }) {
     try {
       // Build query string with parameters
       const queryParams = new URLSearchParams();
-      queryParams.append('page', page);
-      queryParams.append('limit', limit);
       
       if (q) queryParams.append('q', q);
       if (category) {
@@ -70,7 +67,16 @@ export function DataProvider({ children }) {
       
       // Update state with fetched data
       setItems(data.items);
-      setPagination(data.pagination);
+      
+      // Set dummy pagination data since we're not using pagination anymore
+      setPagination({
+        total: data.items.length,
+        page: 1,
+        itemsPerPage: data.items.length,
+        totalPages: 1,
+        links: {}
+      });
+      
       if (data.filters) {
         setFilters(data.filters);
       }
@@ -106,7 +112,7 @@ export function DataProvider({ children }) {
       const newItem = await res.json();
       
       // Refresh the items list to include the new item
-      await fetchItems({ page: pagination.page, limit: pagination.limit });
+      await fetchItems();
       
       setLoading(false);
       return newItem;
@@ -115,7 +121,7 @@ export function DataProvider({ children }) {
       setLoading(false);
       throw err;
     }
-  }, [pagination, fetchItems]);
+  }, [fetchItems]);
 
   // Update an existing item
   const updateItem = useCallback(async (id, itemData) => {
@@ -139,7 +145,7 @@ export function DataProvider({ children }) {
       const updatedItem = await res.json();
       
       // Refresh the items list to reflect the update
-      await fetchItems({ page: pagination.page, limit: pagination.limit });
+      await fetchItems();
       
       setLoading(false);
       return updatedItem;
@@ -148,7 +154,7 @@ export function DataProvider({ children }) {
       setLoading(false);
       throw err;
     }
-  }, [pagination, fetchItems]);
+  }, [fetchItems]);
 
   // Delete an item
   const deleteItem = useCallback(async (id) => {
@@ -168,7 +174,7 @@ export function DataProvider({ children }) {
       const result = await res.json();
       
       // Refresh the items list to reflect the deletion
-      await fetchItems({ page: pagination.page, limit: pagination.limit });
+      await fetchItems();
       
       setLoading(false);
       return result;
@@ -177,7 +183,7 @@ export function DataProvider({ children }) {
       setLoading(false);
       throw err;
     }
-  }, [pagination, fetchItems]);
+  }, [fetchItems]);
 
   // Get a single item by ID
   const getItemById = useCallback(async (id) => {

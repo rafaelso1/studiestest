@@ -60,12 +60,12 @@ function Items() {
   const [toast, setToast] = useState(null);
   const searchInputRef = useRef(null);
 
-  // Load items with current pagination and search parameters
-  const loadItems = async (page = 1, query = searchQuery) => {
+  // Load items with search parameters
+  const loadItems = async (query = searchQuery) => {
     setIsLoading(true);
     try {
-      await fetchItems(page, query);
-      if (query && page === 1) {
+      await fetchItems({ q: query });
+      if (query) {
         showToast(`Search results for "${query}"`, 'success');
       }
     } catch (err) {
@@ -95,12 +95,11 @@ function Items() {
       
       try {
         // Get data from the API
-        const data = await fetchItems(1, searchQuery);
+        const data = await fetchItems({ q: searchQuery });
         
         // Only update state if component is still mounted
         if (active) {
           setItems(data.items);
-          setPagination(data.pagination);
           setIsLoading(false);
         }
       } catch (err) {
@@ -119,19 +118,13 @@ function Items() {
     return () => {
       active = false;
     };
-  }, [fetchItems, setItems, setPagination, searchQuery]);
-
-  // Handle page change
-  const handlePageChange = (newPage) => {
-    if (newPage < 1 || newPage > pagination.totalPages) return;
-    loadItems(newPage, searchQuery);
-  };
+  }, [fetchItems, setItems, searchQuery]);
 
   // Handle search form submission
   const handleSearch = (e) => {
     e.preventDefault();
     updateSearchQuery(searchInput);
-    loadItems(1, searchInput);
+    loadItems(searchInput);
     
     // Focus back to search input for better UX
     if (searchInputRef.current) {
@@ -142,46 +135,22 @@ function Items() {
     }
   };
 
-  // Generate page numbers for pagination
-  const getPageNumbers = () => {
-    const pages = [];
-    const { page, totalPages } = pagination;
-    
-    // Always show first page
-    pages.push(1);
-    
-    // Calculate range of pages to show around current page
-    let start = Math.max(2, page - 1);
-    let end = Math.min(totalPages - 1, page + 1);
-    
-    // Add ellipsis after first page if needed
-    if (start > 2) {
-      pages.push('...');
-    }
-    
-    // Add pages in the middle
-    for (let i = start; i <= end; i++) {
-      pages.push(i);
-    }
-    
-    // Add ellipsis before last page if needed
-    if (end < totalPages - 1 && totalPages > 1) {
-      pages.push('...');
-    }
-    
-    // Add last page if there are multiple pages
-    if (totalPages > 1) {
-      pages.push(totalPages);
-    }
-    
-    return pages;
-  };
-
   if (error) return <div className="error-message" role="alert">{error}</div>;
 
   return (
     <div className="items-container">
-      <h1>Items</h1>
+      <div className="items-header">
+        <div className="items-top-row">
+          <h1>Items</h1>
+          <Link to="/items/new" className="button create-button">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            Create New Item
+          </Link>
+        </div>
+      </div>
       
       {/* Toast notification */}
       {toast && (
@@ -232,7 +201,7 @@ function Items() {
               onClick={() => {
                 setSearchInput('');
                 updateSearchQuery('');
-                loadItems(1, '');
+                loadItems('');
               }}
               aria-label="Clear search"
             >
@@ -241,7 +210,6 @@ function Items() {
           </div>
         )}
       </form>
-      
       {/* Items list */}
       {isLoading ? (
         <>
@@ -273,59 +241,8 @@ function Items() {
             ))}
           </ul>
           
-          {/* Pagination controls */}
-          {pagination.totalPages > 1 && (
-            <nav className="pagination" aria-label="Pagination Navigation">
-              <button 
-                onClick={() => handlePageChange(pagination.page - 1)}
-                disabled={pagination.page === 1}
-                className="pagination-button"
-                aria-label="Go to previous page"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="15 18 9 12 15 6"></polyline>
-                </svg>
-                <span>Previous</span>
-              </button>
-              
-              <div className="page-numbers" role="list">
-                {getPageNumbers().map((pageNum, index) => (
-                  <span 
-                    key={index}
-                    role={pageNum !== '...' ? 'button' : 'presentation'}
-                    aria-current={pageNum === pagination.page ? 'page' : undefined}
-                    aria-label={pageNum !== '...' ? `Page ${pageNum}` : 'More pages'}
-                    className={`page-number ${pageNum === pagination.page ? 'active' : ''} ${pageNum === '...' ? 'ellipsis' : ''}`}
-                    onClick={() => pageNum !== '...' && handlePageChange(pageNum)}
-                    tabIndex={pageNum !== '...' ? 0 : -1}
-                    onKeyPress={(e) => {
-                      if (pageNum !== '...' && (e.key === 'Enter' || e.key === ' ')) {
-                        e.preventDefault();
-                        handlePageChange(pageNum);
-                      }
-                    }}
-                  >
-                    {pageNum}
-                  </span>
-                ))}
-              </div>
-              
-              <button 
-                onClick={() => handlePageChange(pagination.page + 1)}
-                disabled={pagination.page === pagination.totalPages}
-                className="pagination-button"
-                aria-label="Go to next page"
-              >
-                <span>Next</span>
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="9 18 15 12 9 6"></polyline>
-                </svg>
-              </button>
-            </nav>
-          )}
-          
-          <div className="pagination-info" aria-live="polite">
-            Showing {items.length} of {pagination.total} items
+          <div className="items-count" aria-live="polite">
+            Showing {items.length} items
             {searchQuery && <span> matching "{searchQuery}"</span>}
           </div>
         </>

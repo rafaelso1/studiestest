@@ -1,8 +1,9 @@
 import React from 'react';
-import { Routes, Route, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { DataProvider } from '../state/DataContext';
 import Items from './Items';
 import ItemDetail from './ItemDetail';
-import { DataProvider } from '../state/DataContext';
+import ItemCreate from './ItemCreate';
 
 function App() {
   return (
@@ -12,6 +13,8 @@ function App() {
       </nav>
       <Routes>
         <Route path="/" element={<Items />} />
+        <Route path="/items" element={<Items />} />
+        <Route path="/items/new" element={<ItemCreate />} />
         <Route path="/items/:id" element={<ItemDetail />} />
       </Routes>
     </DataProvider>
